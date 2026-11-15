@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Ultra Skill & Particle Studio</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+        body {
+            background-color: #050810;
+            color: #f1f5f9;
+            font-family: system-ui, -apple-system, sans-serif;
+            touch-action: manipulation;
+        }
+        canvas {
+            image-rendering: pixelated;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-3">
+
+    <div class="w-full max-w-lg bg-slate-900/90 backdrop-blur border border-slate-800 rounded-2xl p-4 shadow-2xl">
+        
+        <!-- ส่วนหัว -->
+        <div class="flex items-center justify-between mb-3">
+            <h1 class="text-lg font-extrabold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
+                ⚔️ PARTICLE SKILL MAKER
+            </h1>
+            <span id="statusBadge" class="text-[11px] bg-slate-800 text-slate-400 px-2.5 py-1 rounded-full">
+                รอรูปภาพ
+            </span>
+        </div>
+
+        <!-- ปุ่มเลือกรูปภาพ -->
+        <label class="flex items-center justify-center w-full py-2.5 px-4 mb-3 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-sm rounded-xl cursor-pointer transition shadow-lg shadow-cyan-500/20">
+            <span>📁 เลือกรูปภาพจากเครื่อง</span>
+            <input type="file" id="fileInput" accept="image/*" class="hidden">
+        </label>
+
+        <!-- หน้าจอแสดงผลเอฟเฟกต์ -->
+        <div class="relative w-full aspect-square bg-black rounded-xl border border-slate-800 overflow-hidden flex items-center justify-center mb-3">
+            <canvas id="stage"></canvas>
+            <div id="emptyHint" class="text-center text-slate-600 text-xs px-4">
+                เลือกรูปภาพเพื่อแปลงเป็นอนุภาคสกิล<br>(แนะนำรูปพื้นหลังโปร่งใสหรือพื้นหลังสีดำจะสวยมาก)
+            </div>
+        </div>
+
+        <!-- ปุ่มกดปล่อยสกิล 5 รูปแบบ -->
+        <div class="mb-3">
+            <div class="text-xs font-semibold text-amber-400 mb-1.5">⚡ เลือกท่าสกิล (กดซ้ำเพื่อร่ายใหม่):</div>
+            <div class="grid grid-cols-3 gap-1.5">
+                <button onclick="castSkill('assemble')" class="bg-slate-800 active:bg-cyan-500 active:text-black text-xs font-bold py-2 rounded-lg border border-slate-700 transition">🌀 รวมร่าง</button>
+                <button onclick="castSkill('shatter')" class="bg-slate-800 active:bg-rose-500 active:text-black text-xs font-bold py-2 rounded-lg border border-slate-700 transition">💥 ระเบิดออก</button>
+                <button onclick="castSkill('vortex')" class="bg-slate-800 active:bg-purple-500 active:text-black text-xs font-bold py-2 rounded-lg border border-slate-700 transition">🌪️ พายุหมุน</button>
+                <button onclick="castSkill('wave')" class="bg-slate-800 active:bg-emerald-500 active:text-black text-xs font-bold py-2 rounded-lg border border-slate-700 transition">🌊 คลื่นพลัง</button>
+                <button onclick="castSkill('aura')" class="bg-slate-800 active:bg-amber-500 active:text-black text-xs font-bold py-2 rounded-lg border border-slate-700 transition">✨ ออร่าสถิต</button>
+                <button onclick="castSkill('rise')" class="bg-slate-800 active:bg-sky-500 active:text-black text-xs font-bold py-2 rounded-lg border border-slate-700 transition">🔥 ลอยขึ้นฟ้า</button>
+            </div>
+        </div>
+
+        <!-- แถบปรับความละเอียดและสปีด -->
+        <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2.5 mb-3">
+            <div>
+                <div class="flex justify-between text-xs mb-1">
+                    <span class="text-slate-400">ความละเอียดอนุภาค (ยิ่งต่ำยิ่งเหมือนรูปจริง):</span>
+                    <span id="resText" class="text-cyan-400 font-bold">1 px (คมชัดสูงสุด)</span>
+                </div>
+                <input type="range" id="resSlider" min="1" max="8" value="1" class="w-full accent-cyan-400">
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <div class="flex justify-between text-[11px] mb-1">
+                        <span class="text-slate-400">ขนาดเม็ดสี:</span>
+                        <span id="sizeText" class="text-cyan-400 font-bold">1.2</span>
+                    </div>
+                    <input type="range" id="sizeSlider" min="0.8" max="4" step="0.2" value="1.2" class="w-full accent-cyan-400">
+                </div>
+                <div>
+                    <div class="flex justify-between text-[11px] mb-1">
+                        <span class="text-slate-400">ความเร็วสกิล:</span>
+                        <span id="spdText" class="text-cyan-400 font-bold">7</span>
+                    </div>
+                    <input type="range" id="spdSlider" min="2" max="15" value="7" class="w-full accent-cyan-400">
+                </div>
+            </div>
+        </div>
+
+        <!-- ปุ่มส่งออกไฟล์ -->
+        <div class="grid grid-cols-2 gap-2">
+            <button id="saveImgBtn" disabled class="bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-white text-xs font-bold py-3 rounded-xl border border-slate-700 transition">
+                🖼️ บันทึกรูป (.PNG)
+            </button>
+            <button id="exportFileBtn" disabled class="bg-gradient-to-r from-emerald-500 to-teal-600 disabled:opacity-40 text-slate-950 text-xs font-extrabold py-3 rounded-xl shadow-lg transition">
+                📥 ส่งออกไฟล์สกิล (.HTML)
+            </button>
+        </div>
+
+    </div>
+
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const stage = document.getElementById('stage');
+        const ctx = stage.getContext('2d');
+        const emptyHint = document.getElementById('emptyHint');
+        const statusBadge = document.getElementById('statusBadge');
+
+        const resSlider = document.getElementById('resSlider');
+        const sizeSlider = document.getElementById('sizeSlider');
+        const spdSlider = document.getElementById('spdSlider');
+
+        const resText = document.getElementById('resText');
+        const sizeText = document.getElementById('sizeText');
+        const spdText = document.getElementById('spdText');
+
+        const saveImgBtn = document.getElementById('saveImgBtn');
+        const exportFileBtn = document.getElementById('exportFileBtn');
+
+        let sourceImg = new Image();
+        let dots = [];
+        let activeSkill = 'assemble';
+        let tick = 0;
+        let rafId = null;
+
+        // โหลดรูปภาพ
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                sourceImg.src = ev.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+
+        sourceImg.onload = () => {
+            emptyHint.style.display = 'none';
+            saveImgBtn.disabled = false;
+            exportFileBtn.disabled = false;
+            buildParticles();
+            if (rafId) cancelAnimationFrame(rafId);
+            renderLoop();
+        };
+
+        // อัปเดตค่าตัวเลื่อน
+        resSlider.addEventListener('input', () => {
+            const v = resSlider.value;
+            resText.textContent = v == 1 ? '1 px (คมชัดสูงสุด)' : `${v} px`;
+            if (sourceImg.src) buildParticles();
+        });
+
+        sizeSlider.addEventListener('input', () => {
+            sizeText.textContent = sizeSlider.value;
+        });
+
+        spdSlider.addEventListener('input', () => {
+            spdText.textContent = spdSlider.value;
+        });
+
+        // แปลงรูปเป็นอนุภาค
+        function buildParticles() {
+            const maxSize = 240; // ขนาดที่พอดีกับมือถือและคมชัดสูง
+            let w = sourceImg.width;
+            let h = sourceImg.height;
+
+            if (w > h) {
+                h = Math.round((h / w) * maxSize);
+                w = maxSize;
+            } else {
+                w = Math.round((w / h) * maxSize);
+                h = maxSize;
+            }
+
+            const pad = 60;
+            stage.width = w + pad * 2;
+            stage.height = h + pad * 2;
+
+            const offCanvas = document.createElement('canvas');
+            const offCtx = offCanvas.getContext('2d');
+            offCanvas.width = w;
+            offCanvas.height = h;
+            offCtx.drawImage(sourceImg, 0, 0, w, h);
+
+            const imgData = offCtx.getImageData(0, 0, w, h).data;
+            const step = parseInt(resSlider.value);
+            dots = [];
+
+            for (let y = 0; y < h; y += step) {
+                for (let x = 0; x < w; x += step) {
+                    const idx = (y * w + x) * 4;
+                    const r = imgData[idx];
+                    const g = imgData[idx + 1];
+                    const b = imgData[idx + 2];
+                    const a = imgData[idx + 3];
+
+                    if (a > 90) {
+                        const ox = x + pad;
+                        const oy = y + pad;
+                        dots.push({
+                            x: ox, y: oy,
+                            ox: ox, oy: oy,
+                            color: `rgb(${r},${g},${b})`,
+                            vx: 0, vy: 0,
+                            ang: 0, dist: 0
+                        });
+                    }
+                }
+            }
+
+            statusBadge.textContent = `${dots.length.toLocaleString()} อนุภาค`;
+            statusBadge.className = "text-[11px] bg-cyan-500/20 text-cyan-400 px-2.5 py-1 rounded-full font-bold";
+            castSkill(activeSkill);
+        }
+
+        // สั่งร่ายสกิล
+        window.castSkill = function(skillName) {
+            activeSkill = skillName;
+            tick = 0;
+            const cx = stage.width / 2;
+            const cy = stage.height / 2;
+
+            dots.forEach(d => {
+                if (skillName === 'assemble') {
+                    const a = Math.random() * Math.PI * 2;
+                    const r = 120 + Math.random() * 140;
+                    d.x = cx + Math.cos(a) * r;
+                    d.y = cy + Math.sin(a) * r;
+                } else if (skillName === 'shatter') {
+                    const a = Math.atan2(d.oy - cy, d.ox - cx) + (Math.random() - 0.5) * 0.4;
+                    const pwr = 4 + Math.random() * 10;
+                    d.vx = Math.cos(a) * pwr;
+                    d.vy = Math.sin(a) * pwr;
+                } else if (skillName === 'vortex') {
+                    d.ang = Math.atan2(d.oy - cy, d.ox - cx);
+                    d.dist = Math.hypot(d.ox - cx, d.oy - cy);
+                } else if (skillName === 'rise') {
+                    d.y = d.oy + 120 + Math.random() * 80;
+                    d.x = d.ox + (Math.random() - 0.5) * 40;
+                }
+            });
+        };
+
+        // วนลูปวาดภาพ
+        function renderLoop() {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+            ctx.fillRect(0, 0, stage.width, stage.height);
+
+            const sz = parseFloat(sizeSlider.value);
+            const spd = parseInt(spdSlider.value) * 0.02;
+            const cx = stage.width / 2;
+            const cy = stage.height / 2;
+            tick++;
+
+            for (let i = 0; i < dots.length; i++) {
+                const d = dots[i];
+
+                if (activeSkill === 'assemble' || activeSkill === 'rise') {
+                    d.x += (d.ox - d.x) * (spd * 1.3);
+                    d.y += (d.oy - d.y) * (spd * 1.3);
+                } else if (activeSkill === 'shatter') {
+                    if (tick < 22) {
+                        d.x += d.vx;
+                        d.y += d.vy;
+                        d.vx *= 0.91;
+                        d.vy *= 0.91;
+                    } else {
+                        d.x += (d.ox - d.x) * (spd * 1.1);
+                        d.y += (d.oy - d.y) * (spd * 1.1);
+                    }
+                } else if (activeSkill === 'vortex') {
+                    if (tick < 45) {
+                        d.ang += spd * 1.8;
+                        d.x = cx + Math.cos(d.ang) * d.dist;
+                        d.y = cy + Math.sin(d.ang) * d.dist;
+                    } else {
+                        d.x += (d.ox - d.x) * (spd * 1.4);
+                        d.y += (d.oy - d.y) * (spd * 1.4);
+                    }
+                } else if (activeSkill === 'wave') {
+                    const offset = Math.sin(tick * (spd * 1.5) + d.oy * 0.08) * 12;
+                    d.x = d.ox + offset;
+                    d.y = d.oy;
+                } else if (activeSkill === 'aura') {
+                    d.x = d.ox + Math.sin(tick * 0.12 + i) * (spd * 6);
+                    d.y = d.oy + Math.cos(tick * 0.12 + i) * (spd * 6);
+                }
+
+                ctx.fillStyle = d.color;
+                ctx.fillRect(d.x, d.y, sz, sz);
+            }
+
+            rafId = requestAnimationFrame(renderLoop);
+        }
+
+        // บันทึกรูป PNG
+        saveImgBtn.addEventListener('click', () => {
+            const a = document.createElement('a');
+            a.download = `particle-${activeSkill}.png`;
+            a.href = stage.toDataURL('image/png');
+            a.click();
+        });
+
+        // ส่งออกไฟล์ HTML พร้อมเปิดเล่นทันที
+        exportFileBtn.addEventListener('click', () => {
+            const packData = JSON.stringify(dots.map(d => [Math.round(d.ox), Math.round(d.oy), d.color]));
+            const sz = sizeSlider.value;
+            const spd = spdSlider.value;
+            const sk = activeSkill;
+
+            const htmlOutput = `<!DOCTYPE html>
+<html lang="th"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Skill Effect Viewer</title>
+<style>body{margin:0;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;overflow:hidden}button{position:fixed;bottom:24px;padding:12px 28px;font-size:16px;font-weight:bold;border:none;border-radius:14px;background:#06b6d4;color:#000;box-shadow:0 4px 20px rgba(6,182,212,0.4)}</style>
+</head><body><canvas id="c" width="${stage.width}" height="${stage.height}"></canvas>
+<button onclick="run()">⚡ ปล่อยสกิลอีกครั้ง</button>
+<script>
+const c=document.getElementById('c'),ctx=c.getContext('2d'),raw=${packData};
+const pts=raw.map(p=>({x:p[0],y:p[1],ox:p[0],oy:p[1],c:p[2],vx:0,vy:0,a:0,d:0}));
+let t=0,sk='${sk}',spd=${spd}*0.02,sz=${sz};
+function run(){
+  t=0;const cx=c.width/2,cy=c.height/2;
+  pts.forEach(p=>{
+    if(sk==='assemble'){const a=Math.random()*6.28,r=120+Math.random()*140;p.x=cx+Math.cos(a)*r;p.y=cy+Math.sin(a)*r;}
+    else if(sk==='shatter'){const a=Math.atan2(p.oy-cy,p.ox-cx)+(Math.random()-0.5)*0.4,w=4+Math.random()*10;p.vx=Math.cos(a)*w;p.vy=Math.sin(a)*w;}
+    else if(sk==='vortex'){p.a=Math.atan2(p.oy-cy,p.ox-cx);p.d=Math.hypot(p.ox-cx,p.oy-cy);}
+    else if(sk==='rise'){p.y=p.oy+120+Math.random()*80;p.x=p.ox+(Math.random()-0.5)*40;}
+  });
+}
+function loop(){
+  ctx.fillStyle='rgba(0,0,0,0.35)';ctx.fillRect(0,0,c.width,c.height);t++;
+  const cx=c.width/2,cy=c.height/2;
+  for(let i=0;i<pts.length;i++){
+    const p=pts[i];
+    if(sk==='assemble'||sk==='rise'){p.x+=(p.ox-p.x)*(spd*1.3);p.y+=(p.oy-p.y)*(spd*1.3);}
+    else if(sk==='shatter'){if(t<22){p.x+=p.vx;p.y+=p.vy;p.vx*=0.91;p.vy*=0.91;}else{p.x+=(p.ox-p.x)*(spd*1.1);p.y+=(p.oy-p.y)*(spd*1.1);}}
+    else if(sk==='vortex'){if(t<45){p.a+=spd*1.8;p.x=cx+Math.cos(p.a)*p.d;p.y=cy+Math.sin(p.a)*p.d;}else{p.x+=(p.ox-p.x)*(spd*1.4);p.y+=(p.oy-p.y)*(spd*1.4);}}
+    else if(sk==='wave'){p.x=p.ox+Math.sin(t*(spd*1.5)+p.oy*0.08)*12;p.y=p.oy;}
+    else if(sk==='aura'){p.x=p.ox+Math.sin(t*0.12+i)*(spd*6);p.y=p.oy+Math.cos(t*0.12+i)*(spd*6);}
+    ctx.fillStyle=p.c;ctx.fillRect(p.x,p.y,sz,sz);
+  }
+  requestAnimationFrame(loop);
+}
+run();loop();
+<\/script></body></html>`;
+
+            const blob = new Blob([htmlOutput], { type: 'text/html' });
+            const a = document.createElement('a');
+            a.download = `skill-${sk}.html`;
+            a.href = URL.createObjectURL(blob);
+            a.click();
+        });
+    </script>
+</body>
+</html>
